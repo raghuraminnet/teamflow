@@ -1,0 +1,110 @@
+services:
+  voice-agent:
+    build:
+      context: ./services/voice-agent
+      dockerfile: Dockerfile
+    container_name: teamflow_voice_agent
+    ports:
+      - "3002:3002"
+    environment:
+      - NODE_ENV=production
+      - PORT=3002
+      - DATABASE_URL=${DATABASE_URL}
+      - ASTERISK_HOST=asterisk
+      - ASTERISK_PORT=5038
+      - ASTERISK_USER=${ASTERISK_USER:-teamflow}
+      - ASTERISK_SECRET=${ASTERISK_SECRET}
+      - ASTERISK_CONTEXT=teamflow-inbound
+      - WHISPER_URL=http://whisper:9000
+      - WHISPER_MODEL=${WHISPER_MODEL:-base}
+      - PIPER_URL=http://piper:5000
+      - PIPER_VOICE=${PIPER_VOICE:-en_US-amy-medium}
+      - LLM_PROVIDER=${LLM_PROVIDER:-minimax}
+      - OLLAMA_URL=http://ollama:11434
+      - OLLAMA_MODEL=${OLLAMA_MODEL:-llama3.2:latest}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - OPENAI_MODEL=${OPENAI_MODEL:-gpt-4o-mini}
+      - MINIMAX_API_KEY=${MINIMAX_API_KEY:-}
+      - MINIMAX_MODEL=${MINIMAX_MODEL:-MiniMax-Text-01}
+      - VOICE_DID=${VOICE_DID}
+    volumes:
+      - voice_recordings:/app/recordings
+    depends_on:
+      - postgres
+      - asterisk
+    networks:
+      - trading_net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3002/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  asterisk:
+    image: boardsource/asterisk:20-alpine
+    container_name: teamflow_asterisk
+    ports:
+      - "5060:5060/udp"
+      - "10000-10050:10000-10050/udp"
+    volumes:
+      - ./services/voice-agent/docker/asterisk/extensions.conf:/etc/asterisk/extensions.conf:ro
+      - ./services/voice-agent/docker/asterisk/sip.conf:/etc/asterisk/sip.conf:ro
+      - ./services/voice-agent/docker/asterisk/manager.conf:/etc/asterisk/manager.conf:ro
+      - asterisk_recordings:/var/spool/asterisk/monitor
+    networks:
+      - trading_net
+    restart: unless-stopped
+    cap_add:
+      - NET_ADMIN
+
+  whisper:
+    image: ghcr.io/openai/whisper:main
+    container_name: teamflow_whisper
+    ports:
+      - "9000:9000"
+    command: --api --model base --host 0.0.0.0 --port 9000
+    volumes:
+      - whisper_models:/root/.cache/whisper
+    networks:
+      - trading_net
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+
+  piper:
+    image: ghcr.io/rhasspy/piper-parakeet:latest
+    container_name: teamflow_piper
+    ports:
+      - "5000:5000"
+    volumes:
+      - piper_models:/app
+    command: --model en_US-amy-medium.onnx --device cpu --online 0.0.0.0 5000
+    networks:
+      - trading_net
+    restart: unless-stopped
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: teamflow_ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_models:/root/.ollama
+    networks:
+      - trading_net
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 8G
+    command: serve
+
+volumes:
+  voice_recordings:
+  asterisk_recordings:
+  whisper_models:
+  piper_models:
+  ollama_models:

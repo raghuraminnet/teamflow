@@ -1,0 +1,19 @@
+teamflow.codeapp.site {
+    root * /usr/share/nginx/html
+    file_server
+    try_files {path} {path}/ /index.html
+
+    @api {
+        path /api/*
+    }
+    handle @api {
+        reverse_proxy http://teamflow-gateway:3000
+    }
+
+    @ws {
+        path /ws/*
+    }
+    handle @ws {
+        reverse_proxy http://teamflow-gateway:3000
+    }
+}

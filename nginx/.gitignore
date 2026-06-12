@@ -1,0 +1,4 @@
+# recordings/
+*.wav
+*.mp3
+*.pcm

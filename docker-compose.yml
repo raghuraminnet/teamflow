@@ -1,0 +1,208 @@
+version: '3.8'
+
+# ============================================================
+# TeamFlow — Phase 1 Docker Compose
+# Voice-Powered Team Operations Platform
+# ============================================================
+
+x-common-env: &common-env
+  TZ: UTC
+
+x-logging: &logging
+  logging:
+    driver: "json-file"
+    options:
+      max-size: "50m"
+      max-file: "5"
+
+services:
+  # ------------------------------------------------------------
+  # DATABASE
+  # ------------------------------------------------------------
+  postgres:
+    image: postgres:16-alpine
+    container_name: teamflow-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: teamflow
+      POSTGRES_USER: teamflow_user
+      POSTGRES_PASSWORD: teamflow_pass_2026
+      <<: *common-env
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./services/teamflow/src/db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - ./services/voice/src/db/schema.sql:/docker-entrypoint-initdb.d/02-voice.sql:ro
+      - ./services/notify/src/db/schema.sql:/docker-entrypoint-initdb.d/03-notify.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U teamflow_user -d teamflow"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    networks:
+      - teamflow-net
+    <<: *logging
+
+  # ------------------------------------------------------------
+  # CORE API
+  # ------------------------------------------------------------
+  teamflow-api:
+    build:
+      context: ./services/teamflow
+      dockerfile: Dockerfile
+    container_name: teamflow-api
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    environment:
+      DATABASE_URL: postgresql://teamflow_user:teamflow_pass_2026@teamflow-db:5432/teamflow
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET required}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:?JWT_REFRESH_SECRET required}
+      PORT: 3001
+      NOTIFY_URL: http://notify:3003
+      <<: *common-env
+    volumes:
+      - ./services/teamflow/uploads:/app/uploads
+      - teamflow-recordings:/app/recordings
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - teamflow-net
+    <<: *logging
+
+  # ------------------------------------------------------------
+  # GATEWAY SERVICE
+  # ------------------------------------------------------------
+  gateway:
+    build:
+      context: ./gateway
+      dockerfile: Dockerfile
+    container_name: teamflow-gateway
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      PORT: 3000
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET required}
+      RATE_LIMIT: ${RATE_LIMIT:-100}
+      RATE_LIMIT_IP: ${RATE_LIMIT_IP:-500}
+      FRONTEND_ORIGIN: ${FRONTEND_ORIGIN:-http://localhost:80}
+      <<: *common-env
+    depends_on:
+      teamflow-api:
+        condition: service_started
+    networks:
+      - teamflow-net
+    <<: *logging
+
+  # ------------------------------------------------------------
+  # VOICE AGENT SERVICE
+  # ------------------------------------------------------------
+  voice:
+    build:
+      context: ./services/voice
+      dockerfile: Dockerfile
+    container_name: teamflow-voice
+    restart: unless-stopped
+    ports:
+      - "3002:3002"
+    environment:
+      VOICE_PORT: 3002
+      DATABASE_URL: postgresql://teamflow_user:teamflow_pass_2026@teamflow-db:5432/teamflow
+      ASTERISK_HOST: ${ASTERISK_HOST:-asterisk}
+      ASTERISK_PORT: ${ASTERISK_PORT:-5038}
+      ASTERISK_MANAGER_USER: ${ASTERISK_MANAGER_USER:-teamflow}
+      ASTERISK_MANAGER_SECRET: ${ASTERISK_MANAGER_SECRET:-}
+      ASTERISK_CONTEXT: ${ASTERISK_CONTEXT:-teamflow-inbound}
+      WHISPER_URL: ${WHISPER_URL:-http://whisper:9001}
+      WHISPER_MODEL: ${WHISPER_MODEL:-base}
+      PIPER_URL: ${PIPER_URL:-http://piper:5000}
+      PIPER_VOICE: ${PIPER_VOICE:-en_US-amy-medium}
+      LLM_PROVIDER: ${LLM_PROVIDER:-ollama}
+      OLLAMA_URL: ${OLLAMA_URL:-http://ollama:11434}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-llama3}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      TF_API_URL: http://teamflow-api:3001
+      RECORDINGS_DIR: /app/recordings
+      <<: *common-env
+    volumes:
+      - teamflow-recordings:/app/recordings
+      - /var/run/asterisk:/var/run/asterisk
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - teamflow-net
+    <<: *logging
+
+  # ------------------------------------------------------------
+  # NOTIFY SERVICE
+  # ------------------------------------------------------------
+  notify:
+    build:
+      context: ./services/notify
+      dockerfile: Dockerfile
+    container_name: teamflow-notify
+    restart: unless-stopped
+    ports:
+      - "3003:3003"
+    environment:
+      NOTIFY_PORT: 3003
+      DATABASE_URL: postgresql://teamflow_user:teamflow_pass_2026@teamflow-db:5432/teamflow
+      SMTP_HOST: ${SMTP_HOST:-smtp.gmail.com}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      SMTP_FROM: ${SMTP_FROM:-noreply@teamflow.local}
+      <<: *common-env
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - teamflow-net
+    <<: *logging
+
+  # ------------------------------------------------------------
+  # FRONTEND + NGINX
+  # ------------------------------------------------------------
+  web:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: teamflow-web
+    restart: unless-stopped
+    volumes:
+      # Mount nginx configs from the nginx/ source directory
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+      - teamflow-recordings:/usr/share/nginx/html/recordings:ro
+    depends_on:
+      gateway:
+        condition: service_started
+      teamflow-api:
+        condition: service_started
+      voice:
+        condition: service_started
+      notify:
+        condition: service_started
+    networks:
+      - teamflow-net
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost/ || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    <<: *logging
+
+networks:
+  teamflow-net:
+    driver: bridge
+
+volumes:
+  pgdata:
+    driver: local
+  teamflow-recordings:
+    driver: local
