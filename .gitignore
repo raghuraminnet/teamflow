@@ -11,3 +11,5 @@ asterisk_recordings/
 whisper_models/
 piper_models/
 ollama_models/
+package-lock.json
+services/voice/node_modules/
