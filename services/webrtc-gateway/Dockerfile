@@ -1,19 +1,20 @@
-FROM node:22-alpine
+FROM node:22-bookworm
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+  python3 python3-pip python3-venv make g++ git \
+  && apt-get clean && rm -rf /var/lib/apt/lists/* \
+  && python3 -m pip install --break-system-packages invoke
 
 WORKDIR /app
 
-# mediasoup needs Python + make + g++ for native compilation
-RUN apk add --no-cache \
-  python3 make g++ git \
-  linux-headers musl-dev
+COPY package.json ./
 
-COPY package.json package-lock.json ./
-RUN npm install --ignore-scripts
+# Let npm run its own postinstall (builds mediasoup worker)
+RUN npm install
 
-# Build native mediasoup
-RUN npm rebuild mediasoup
+COPY tsconfig.json ./
+COPY src ./src
+RUN npm run build
 
-COPY . .
-RUN npm run build || true
-
+EXPOSE 3004
 CMD ["node", "dist/index.js"]
