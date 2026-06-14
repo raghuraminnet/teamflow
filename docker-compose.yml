@@ -31,7 +31,7 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./services/teamflow/src/db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
-      - ./services/voice/src/db/schema.sql:/docker-entrypoint-initdb.d/02-voice.sql:ro
+      - ./services/voice-agent/src/db/schema.sql:/docker-entrypoint-initdb.d/02-voice.sql:ro
       - ./services/notify/src/db/schema.sql:/docker-entrypoint-initdb.d/03-notify.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U teamflow_user -d teamflow"]
@@ -101,7 +101,7 @@ services:
   # ------------------------------------------------------------
   voice:
     build:
-      context: ./services/voice
+      context: ./services/voice-agent
       dockerfile: Dockerfile
     container_name: teamflow-voice
     restart: unless-stopped
@@ -110,7 +110,8 @@ services:
     environment:
       VOICE_PORT: 3002
       DATABASE_URL: postgresql://teamflow_user:teamflow_pass_2026@teamflow-db:5432/teamflow
-      ASTERISK_HOST: 172.22.0.1
+      WEBRTC_GATEWAY_URL: http://webrtc-gateway:3004
+      ASTERISK_HOST: ${ASTERISK_HOST:-}
       ASTERISK_PORT: ${ASTERISK_PORT:-5038}
       ASTERISK_MANAGER_USER: ${ASTERISK_MANAGER_USER:-teamflow}
       ASTERISK_MANAGER_SECRET: teamflow_ami_secret_2026
@@ -132,9 +133,30 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      webrtc-gateway:
+        condition: service_started
     networks:
       - teamflow-net
     <<: *logging
+
+  # ------------------------------------------------------------
+  # WEBRTC GATEWAY (standalone, no external APIs)
+  # ------------------------------------------------------------
+  webrtc-gateway:
+    build:
+      context: ./services/webrtc-gateway
+      dockerfile: Dockerfile
+    container_name: teamflow-webrtc
+    restart: unless-stopped
+    ports:
+      - "3004:3004"
+    environment:
+      - WEBRTC_PORT=3004
+      - MEDIASOUP_LISTEN_IP=0.0.0.0
+      - MEDIASOUP_ANNOUNCED_IP=${WEBRTC_ANNOUNCED_IP:-127.0.0.1}
+      - NODE_ENV=production
+    networks:
+      - teamflow-net
 
   # ------------------------------------------------------------
   # NOTIFY SERVICE
