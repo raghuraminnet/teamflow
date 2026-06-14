@@ -17,7 +17,7 @@ export class AsteriskAMI extends EventEmitter {
   async connect(): Promise<void> {
     return new Promise((resolve, reject) => {
       this.socket = net.createConnection({ host: this.host, port: this.port }, () => {
-        this.connected = true; this.login().then(resolve).catch(reject);
+        this.connected = true; this.login().then(() => resolve()).catch(reject);
       });
       let buffer = '';
       this.socket.on('data', (chunk) => {

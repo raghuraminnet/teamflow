@@ -7,6 +7,12 @@ export interface AuthRequest extends Request {
 }
 
 export function authMiddleware(req: AuthRequest, res: Response, next: NextFunction) {
+  // Inject x-original-url so proxy can reconstruct the full path (Express strips mount prefix)
+  if (!req.headers['x-original-url']) {
+    const full = (req as Request & { originalUrl?: string }).originalUrl ?? req.url ?? '';
+    req.headers['x-original-url'] = full;
+  }
+
   // Gateway injects X-User-Id when it validates the JWT — trust it for proxied requests
   const userId = req.headers['x-user-id'] as string | undefined;
   const userRole = req.headers['x-user-role'] as string | undefined;

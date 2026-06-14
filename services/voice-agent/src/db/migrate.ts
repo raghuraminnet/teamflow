@@ -1,6 +1,6 @@
-import { Client } from 'pg';
+import type { PoolClient } from 'pg';
 
-export async function migrate(client: Client, _schema: Record<string,unknown>) {
+export async function migrate(client: PoolClient, _schema: Record<string,unknown>) {
   const sql = [
     `CREATE TABLE IF NOT EXISTS voice.voice_agents (
       id SERIAL PRIMARY KEY, name VARCHAR(255) NOT NULL, description TEXT,

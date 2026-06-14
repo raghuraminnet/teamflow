@@ -1,0 +1,15 @@
+tree 4badd9b225d47847f888662f7ae725ac9bcc619e
+author Rockstar <rockstar@openclaw> 1781234366 +0000
+committer Rockstar <rockstar@openclaw> 1781234366 +0000
+
+Initial commit: TeamFlow Voice Agent Service
+
+- Voice agent service (TypeScript/Express): Asterisk AMI, Whisper STT, Piper TTS
+- LLM clients: MiniMax, Ollama, OpenAI
+- Agent flow executor: 7 step types (speak, collect, condition, transfer, task_update, delay, end)
+- Campaign runner for outbound call campaigns
+- REST API: /agents, /campaigns, /calls, /stats/summary
+- PostgreSQL schema in 'voice' namespace
+- Socket.IO real-time events
+- Docker + Asterisk SIP/IVR configs
+- Frontend: VoiceAgents, Campaigns, CallLogs pages with full UI

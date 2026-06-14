@@ -110,17 +110,17 @@ services:
     environment:
       VOICE_PORT: 3002
       DATABASE_URL: postgresql://teamflow_user:teamflow_pass_2026@teamflow-db:5432/teamflow
-      ASTERISK_HOST: ${ASTERISK_HOST:-asterisk}
+      ASTERISK_HOST: 172.22.0.1
       ASTERISK_PORT: ${ASTERISK_PORT:-5038}
       ASTERISK_MANAGER_USER: ${ASTERISK_MANAGER_USER:-teamflow}
-      ASTERISK_MANAGER_SECRET: ${ASTERISK_MANAGER_SECRET:-}
+      ASTERISK_MANAGER_SECRET: teamflow_ami_secret_2026
       ASTERISK_CONTEXT: ${ASTERISK_CONTEXT:-teamflow-inbound}
       WHISPER_URL: ${WHISPER_URL:-http://whisper:9001}
       WHISPER_MODEL: ${WHISPER_MODEL:-base}
       PIPER_URL: ${PIPER_URL:-http://piper:5000}
       PIPER_VOICE: ${PIPER_VOICE:-en_US-amy-medium}
       LLM_PROVIDER: ${LLM_PROVIDER:-ollama}
-      OLLAMA_URL: ${OLLAMA_URL:-http://ollama:11434}
+      OLLAMA_URL: http://45.32.104.152:11434
       OLLAMA_MODEL: ${OLLAMA_MODEL:-llama3}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       TF_API_URL: http://teamflow-api:3001

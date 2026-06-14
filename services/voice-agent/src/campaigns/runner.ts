@@ -17,9 +17,9 @@ export interface CampaignJob {
 export class CampaignRunner extends EventEmitter {
   private flows = new Map<string, AgentFlow>();
 
-  constructor(private ami: AsteriskAMI, private stt: WhisperSTT, private tts: PiperTTS, private llm: LLMClient) {
+  constructor(private ami: AsteriskAMI | null, private stt: WhisperSTT, private tts: PiperTTS, private llm: LLMClient) {
     super();
-    this.ami.on('Hangup', () => {});
+    if (this.ami) this.ami.on('Hangup', () => {});
   }
 
   async startCampaign(job: CampaignJob) {
@@ -35,6 +35,7 @@ export class CampaignRunner extends EventEmitter {
       });
       try {
         const channel = `SIP/${contact.phone}@outbound`;
+        if (!this.ami) { console.warn('[Campaign] No AMI — skipping outbound call'); return; }
         await this.ami.originateCall(channel, contact.phone, 'teamflow-outbound',
           `TeamFlow AI <${process.env.VOICE_DID || '0000'}>`);
       } catch (err) {

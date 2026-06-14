@@ -1,5 +1,5 @@
 import { drizzle } from 'drizzle-orm/node-postgres';
-import { Pool } from 'pg';
+import { Pool, type PoolClient } from 'pg';
 import * as schema from './schema.js';
 import { migrate } from './migrate.js';
 
@@ -8,9 +8,9 @@ export const pool = new Pool({ connectionString: DATABASE_URL });
 export const db = drizzle(pool, { schema });
 
 export async function initDatabase() {
-  const client = await pool.connect();
+  const client: PoolClient = await pool.connect();
   try {
     await client.query('CREATE SCHEMA IF NOT EXISTS voice;');
-    await migrate(client, schema);
+    await migrate(client, schema as Record<string,unknown>);
   } finally { client.release(); }
 }

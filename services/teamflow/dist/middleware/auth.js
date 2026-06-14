@@ -1,5 +1,10 @@
 import { verifyAccessToken } from '../utils/jwt.js';
 export function authMiddleware(req, res, next) {
+    // Inject x-original-url so proxy can reconstruct the full path (Express strips mount prefix)
+    if (!req.headers['x-original-url']) {
+        const full = req.originalUrl ?? req.url ?? '';
+        req.headers['x-original-url'] = full;
+    }
     // Gateway injects X-User-Id when it validates the JWT — trust it for proxied requests
     const userId = req.headers['x-user-id'];
     const userRole = req.headers['x-user-role'];

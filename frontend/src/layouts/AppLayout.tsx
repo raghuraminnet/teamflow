@@ -5,7 +5,7 @@ import { Avatar } from '@/components/Layout';
 import { NotificationsBell } from '@/components/Notifications';
 import {
   LayoutDashboard, Users, FolderKanban, CheckSquare, Workflow,
-  BookOpen, Settings, LogOut, ChevronRight, Layers
+  BookOpen, Settings, LogOut, ChevronRight, Layers, Mic, PhoneOutgoing
 } from 'lucide-react';
 
 interface NavItem {
@@ -22,6 +22,9 @@ const ADMIN_NAV: NavItem[] = [
   { label: 'Team', to: '/admin/team', icon: <Layers size={18} /> },
   { label: 'Workflows', to: '/admin/workflows', icon: <Workflow size={18} /> },
   { label: 'Knowledge Base', to: '/admin/kb', icon: <BookOpen size={18} /> },
+  { label: 'Voice Agents', to: '/admin/voice-agents', icon: <Mic size={18} /> },
+  { label: 'Campaigns', to: '/admin/campaigns', icon: <PhoneOutgoing size={18} /> },
+  { label: 'Call Logs', to: '/admin/call-logs', icon: <PhoneOutgoing size={18} /> },
 ];
 
 const TEAM_NAV: NavItem[] = [

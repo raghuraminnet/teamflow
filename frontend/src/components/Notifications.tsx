@@ -45,7 +45,7 @@ function timeAgo(dateStr: string): string {
   return `${Math.floor(diff / 86400)}d ago`;
 }
 
-const API = 'https://api.codeapp.site';
+const API = ''; // relative URLs, proxied by Caddy/nginx
 
 async function fetcher(path: string, accessToken: string, method = 'GET', body?: unknown) {
   const res = await fetch(`${API}${path}`, {

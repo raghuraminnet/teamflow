@@ -12,6 +12,9 @@ import TeamPage from '@/pages/admin/Team';
 import WorkflowsPage from '@/pages/admin/Workflows';
 import WorkflowBuilderPage from '@/pages/admin/WorkflowBuilder';
 import KBAdminPage from '@/pages/admin/KB';
+import VoiceAgentsPage from '@/pages/admin/VoiceAgents';
+import CampaignsPage from '@/pages/admin/Campaigns';
+import CallLogsPage from '@/pages/admin/CallLogs';
 import MyTasksPage from '@/pages/team/MyTasks';
 import TeamKBPage from '@/pages/team/KB';
 import TeamProjectsPage from '@/pages/team/TeamProjects';
@@ -47,6 +50,9 @@ export default function App() {
         <Route path="/admin/workflows" element={<AdminRoute><WorkflowsPage /></AdminRoute>} />
         <Route path="/admin/workflows/build/:id" element={<AdminRoute><WorkflowBuilderPage /></AdminRoute>} />
         <Route path="/admin/kb" element={<AdminRoute><KBAdminPage /></AdminRoute>} />
+        <Route path="/admin/voice-agents" element={<AdminRoute><VoiceAgentsPage /></AdminRoute>} />
+        <Route path="/admin/campaigns" element={<AdminRoute><CampaignsPage /></AdminRoute>} />
+        <Route path="/admin/call-logs" element={<AdminRoute><CallLogsPage /></AdminRoute>} />
 
         {/* Team routes */}
         <Route path="/team" element={<RequireAuth><MyTasksPage /></RequireAuth>} />

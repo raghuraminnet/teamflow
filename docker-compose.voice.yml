@@ -1,4 +1,33 @@
+version: '3.8'
+
+# ============================================================
+# TeamFlow — Standalone Voice (WebRTC, no external APIs)
+# ============================================================
+
 services:
+  # ------------------------------------------------------------
+  # WebRTC Gateway (mediasoup — replaces Asterisk entirely)
+  # ------------------------------------------------------------
+  webrtc-gateway:
+    build:
+      context: ./services/webrtc-gateway
+      dockerfile: Dockerfile
+    container_name: teamflow-webrtc
+    restart: unless-stopped
+    ports:
+      - "3004:3004"
+    environment:
+      - WEBRTC_PORT=3004
+      - MEDIASOUP_LISTEN_IP=0.0.0.0
+      # Set announced IP to your server's public IP for WebRTC穿透
+      - MEDIASOUP_ANNOUNCED_IP=${WEBRTC_ANNOUNCED_IP:-127.0.0.1}
+      - NODE_ENV=production
+    networks:
+      - teamflow-net
+
+  # ------------------------------------------------------------
+  # Voice Agent (AI calling — now WebRTC-first)
+  # ------------------------------------------------------------
   voice-agent:
     build:
       context: ./services/voice-agent
@@ -10,11 +39,9 @@ services:
       - NODE_ENV=production
       - PORT=3002
       - DATABASE_URL=${DATABASE_URL}
-      - ASTERISK_HOST=asterisk
-      - ASTERISK_PORT=5038
-      - ASTERISK_USER=${ASTERISK_USER:-teamflow}
-      - ASTERISK_SECRET=${ASTERISK_SECRET}
-      - ASTERISK_CONTEXT=teamflow-inbound
+      # WebRTC gateway (no Asterisk needed)
+      - WEBRTC_GATEWAY_URL=http://webrtc-gateway:3004
+      # STT / TTS / LLM — all self-hosted
       - WHISPER_URL=http://whisper:9000
       - WHISPER_MODEL=${WHISPER_MODEL:-base}
       - PIPER_URL=http://piper:5000
@@ -26,14 +53,13 @@ services:
       - OPENAI_MODEL=${OPENAI_MODEL:-gpt-4o-mini}
       - MINIMAX_API_KEY=${MINIMAX_API_KEY:-}
       - MINIMAX_MODEL=${MINIMAX_MODEL:-MiniMax-Text-01}
-      - VOICE_DID=${VOICE_DID}
     volumes:
       - voice_recordings:/app/recordings
     depends_on:
       - postgres
-      - asterisk
+      - webrtc-gateway
     networks:
-      - trading_net
+      - teamflow-net
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:3002/health"]
@@ -41,23 +67,26 @@ services:
       timeout: 10s
       retries: 3
 
-  asterisk:
-    image: boardsource/asterisk:20-alpine
-    container_name: teamflow_asterisk
-    ports:
-      - "5060:5060/udp"
-      - "10000-10050:10000-10050/udp"
-    volumes:
-      - ./services/voice-agent/docker/asterisk/extensions.conf:/etc/asterisk/extensions.conf:ro
-      - ./services/voice-agent/docker/asterisk/sip.conf:/etc/asterisk/sip.conf:ro
-      - ./services/voice-agent/docker/asterisk/manager.conf:/etc/asterisk/manager.conf:ro
-      - asterisk_recordings:/var/spool/asterisk/monitor
-    networks:
-      - trading_net
+  # ------------------------------------------------------------
+  # Database
+  # ------------------------------------------------------------
+  postgres:
+    image: postgres:16-alpine
+    container_name: teamflow-db
     restart: unless-stopped
-    cap_add:
-      - NET_ADMIN
+    environment:
+      POSTGRES_DB: teamflow
+      POSTGRES_USER: teamflow_user
+      POSTGRES_PASSWORD: teamflow_pass_2026
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./services/voice-agent/src/db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    networks:
+      - teamflow-net
 
+  # ------------------------------------------------------------
+  # AI Services (all self-hosted, no external API costs)
+  # ------------------------------------------------------------
   whisper:
     image: ghcr.io/openai/whisper:main
     container_name: teamflow_whisper
@@ -67,7 +96,7 @@ services:
     volumes:
       - whisper_models:/root/.cache/whisper
     networks:
-      - trading_net
+      - teamflow-net
     restart: unless-stopped
     deploy:
       resources:
@@ -83,7 +112,7 @@ services:
       - piper_models:/app
     command: --model en_US-amy-medium.onnx --device cpu --online 0.0.0.0 5000
     networks:
-      - trading_net
+      - teamflow-net
     restart: unless-stopped
 
   ollama:
@@ -94,7 +123,7 @@ services:
     volumes:
       - ollama_models:/root/.ollama
     networks:
-      - trading_net
+      - teamflow-net
     restart: unless-stopped
     deploy:
       resources:
@@ -102,9 +131,13 @@ services:
           memory: 8G
     command: serve
 
+networks:
+  teamflow-net:
+    driver: bridge
+
 volumes:
   voice_recordings:
-  asterisk_recordings:
+  pgdata:
   whisper_models:
   piper_models:
   ollama_models:

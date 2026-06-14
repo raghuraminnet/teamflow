@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Mic, Plus, Trash2, Edit2, Phone, Play, Pause } from 'lucide-react';
+import { AdminLayout } from '@/layouts/AppLayout';
 import { voiceApi } from '../../lib/api';
 
 interface AgentStep {
@@ -50,7 +51,7 @@ const DEFAULT_CONFIG: Record<string, Record<string, unknown>> = {
 };
 
 export const VoiceAgents: React.FC = () => {
-  const token = localStorage.getItem('token') || '';
+  
   const [agents, setAgents] = useState<Agent[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -63,7 +64,7 @@ export const VoiceAgents: React.FC = () => {
 
   const fetchAgents = async () => {
     try {
-      const data = await voiceApi.agents.list(token) as { data: Agent[] };
+      const data = await voiceApi.agents.list() as { data: Agent[] };
       setAgents(data.data || []);
     } catch { setAgents([]); } finally { setLoading(false); }
   };
@@ -72,15 +73,15 @@ export const VoiceAgents: React.FC = () => {
 
   const handleSave = async () => {
     try {
-      if (editingId) await voiceApi.agents.update(token, editingId, form);
-      else await voiceApi.agents.create(token, form);
+      if (editingId) await voiceApi.agents.update( editingId, form);
+      else await voiceApi.agents.create( form);
       setShowModal(false); setEditingId(null); resetForm(); fetchAgents();
     } catch (err) { alert(`Save failed: ${err}`); }
   };
 
   const handleDelete = async (id: number) => {
     if (!confirm('Delete this agent?')) return;
-    try { await voiceApi.agents.delete(token, id); fetchAgents(); }
+    try { await voiceApi.agents.delete( id); fetchAgents(); }
     catch (err) { alert(`Delete failed: ${err}`); }
   };
 
@@ -109,7 +110,8 @@ export const VoiceAgents: React.FC = () => {
   const fmtDuration = (s: number) => { const m = Math.floor(s / 60), sec = s % 60; return m > 0 ? `${m}m ${sec}s` : `${sec}s`; };
 
   return (
-    <div>
+      <AdminLayout>
+        <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
         <div>
           <h1 style={{ fontSize: '1.8rem', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -303,6 +305,8 @@ export const VoiceAgents: React.FC = () => {
           </div>
         </div>
       )}
-    </div>
+        </div>
+      </AdminLayout>
   );
 };
+export default VoiceAgents;
