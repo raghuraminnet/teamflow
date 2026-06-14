@@ -14,7 +14,7 @@ export interface CallState {
 }
 
 interface UseWebRTCCallOptions {
-  agentId: number;
+  agentId: string | number;
   gatewayUrl?: string;
   userId?: number;
   userName?: string;

@@ -13,6 +13,7 @@ import WorkflowsPage from '@/pages/admin/Workflows';
 import WorkflowBuilderPage from '@/pages/admin/WorkflowBuilder';
 import KBAdminPage from '@/pages/admin/KB';
 import VoiceAgentsPage from '@/pages/admin/VoiceAgents';
+import VoiceCallPage from '@/pages/admin/VoiceCall';
 import CampaignsPage from '@/pages/admin/Campaigns';
 import CallLogsPage from '@/pages/admin/CallLogs';
 import MyTasksPage from '@/pages/team/MyTasks';
@@ -51,6 +52,7 @@ export default function App() {
         <Route path="/admin/workflows/build/:id" element={<AdminRoute><WorkflowBuilderPage /></AdminRoute>} />
         <Route path="/admin/kb" element={<AdminRoute><KBAdminPage /></AdminRoute>} />
         <Route path="/admin/voice-agents" element={<AdminRoute><VoiceAgentsPage /></AdminRoute>} />
+        <Route path="/admin/voice-call/:agentId" element={<AdminRoute><VoiceCallPage /></AdminRoute>} />
         <Route path="/admin/campaigns" element={<AdminRoute><CampaignsPage /></AdminRoute>} />
         <Route path="/admin/call-logs" element={<AdminRoute><CallLogsPage /></AdminRoute>} />
 

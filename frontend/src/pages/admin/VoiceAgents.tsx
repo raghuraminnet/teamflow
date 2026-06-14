@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Mic, Plus, Trash2, Edit2, Phone, Play, Pause } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { AdminLayout } from '@/layouts/AppLayout';
 import { voiceApi } from '../../lib/api';
 
@@ -61,6 +62,7 @@ export const VoiceAgents: React.FC = () => {
     prompt: 'You are a professional AI voice assistant. Be concise, friendly, and helpful.',
     voiceId: 'en_US-amy-medium', llmProvider: 'minimax', llmModel: 'MiniMax-Text-01',
   });
+  const navigate = useNavigate();
 
   const fetchAgents = async () => {
     try {
@@ -158,9 +160,17 @@ export const VoiceAgents: React.FC = () => {
                     </span>
                   </div>
                 </div>
-                <div style={{ display: 'flex', gap: '4px' }}>
+                <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
                   <button className="btn btn-secondary" style={{ padding: '6px' }} onClick={() => handleEdit(a)} title="Edit"><Edit2 size={14} /></button>
                   <button className="btn btn-secondary" style={{ padding: '6px', color: 'var(--danger)' }} onClick={() => handleDelete(a.id)} title="Delete"><Trash2 size={14} /></button>
+                  <button
+                    className="btn"
+                    style={{ background: 'var(--success)', color: '#fff', padding: '6px 12px', gap: '6px', fontSize: '0.75rem' }}
+                    onClick={() => navigate(`/admin/voice-call/${a.id}`)}
+                    title="Call Now"
+                  >
+                    <Phone size={14} /> Call Now
+                  </button>
                 </div>
               </div>
               {a.description && <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', marginBottom: '12px' }}>{a.description}</p>}
